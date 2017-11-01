@@ -44,3 +44,18 @@ Also, a computer should be able to work offline. Even if it works on the same pr
 that is good because it means the result is doubly verified.
 
 A computer shoud work offline, save the results locally, and send them on the network once it goes back online.
+
+
+#####
+Here is the formula we will use in order to compute e:
+e = 1/n! * \sum_{k=0}^n \prod_{h=k+1}^n
+
+Now, we should divide this into small tasks. Then we would write onto disk the partial results of
+multiplications in files of size 4MiB - 8MiB. We do this in order to not use all of RAM.
+Now, we will keep the partial sum of the terms on disk as well. We will have to split it up into
+several files. We should indicate somewhere the number of terms added.
+
+So regarding the partition of tasks: 4MiB-8MiB files which contain for example: productory from 2240992 to 23093009329.
+The important thing is that the file is in the range 4-8MiB.
+
+The program should also return where it left off in the event that the OS requests to end it.
