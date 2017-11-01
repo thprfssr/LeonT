@@ -1,0 +1,187 @@
+I want to calculate the constant e to one trillion digits.
+To do that, I plan on having multiple computers working together in order to solve the problem.
+Comp#1: You sum up the term #193220 to #203230949
+...
+Comp#k: Compile the results from these computers, and give me a decimal expansion.
+..
+
+To do that, I assume we need a hierarchy of director computers, to determine which tasks
+to divide between which computers. We should also have a director of directors.
+Also, if a director goes offline, the group of computers it used to direct should
+decide which one of themselves will be the new director.
+
+Oh, we should divide our computers into groups, each one with one director.
+
+
+
+
+#####
+
+Using the Lagrange error bound, we get
+R_n(x) = f^(n+1)(c)/(n+1)! * (x-a)^(n+1), for a is the center, for c between x and a. n is the nth taylor polynomial.
+Now, we let f(x)=e^x,  x=1, and a=0. Thus,
+R_n(1) = e^c/(n+1)! <= e/(n+1)!
+We want our error R to be R<= 10^(-10^12), so
+e/(n+1)! <= 10^(-10^12)
+\implies
+e * 10^trillion <= (n+1)!
+
+If we solve that inequality, we obtain the number n of terms.
+
+
+We might want to have multiple computers work together in order to compute the factorials.
+Also, we might want to save the factorials somewhere in the network (at multiple places,
+in case one or more computers go offline) so that we will not have to recalculate it.
+
+The network should be such that if a node goes offline, the network should not be severely affected.
+And that if a node goes online, she is immediately assigned a group and a task to work with.
+
+RESOURCES SHOULD NOT BE LEFT IDLE
+
+
+
+Also, a computer should be able to work offline. Even if it works on the same problem as another computer online,
+that is good because it means the result is doubly verified.
+
+A computer shoud work offline, save the results locally, and send them on the network once it goes back online.
+
+
+#####
+Here is the formula we will use in order to compute e:
+e = 1/n! * \sum_{k=0}^n \prod_{h=k+1}^n
+
+Now, we should divide this into small tasks. Then we would write onto disk the partial results of
+multiplications in files of size 4MiB - 8MiB. We do this in order to not use all of RAM.
+Now, we will keep the partial sum of the terms on disk as well. We will have to split it up into
+several files. We should indicate somewhere the number of terms added.
+
+So regarding the partition of tasks: 4MiB-8MiB files which contain for example: productory from 2240992 to 23093009329.
+The important thing is that the file is in the range 4-8MiB.
+
+The program should also return where it left off in the event that the OS requests to end it.
+
+The program should also have a status file, where it outputs its status.
+The status file should be read and displayed on request.
+
+Also, the program should have a log file. In it, we make sure which processes start, which processes end properly,
+which processes are interrupted, etc. That way, we can know which files might be corrupted due to an interruption.
+
+Moreover, there should be a Task Queue file.
+
+More on Tasks:
+
+
+Process to compute Prod(a,b) (multiply every number between a and b inclusive)
+- Start from a, and then compute the binary digits of the partial products.
+Once the binary digits reach a certain threshold at Prod(a,k), append
+Prod(a,k) to the Task Queue.
+-Repeat, but this time starting from k+1.
+-Keep going until all of Prod(a,b) is covered.
+
+*The Task Manager portion of the program should assign some tasks to every node, and the nodes
+should confirm that they have accepted the task.
+
+Once Prod(a,b) is partitioned, and the partial products are computed, we need a way to
+multiply all of those together and store it in multiple files. This is a proposal
+on how to store it between multiple files:
+- Index file: tells what number is stored in the files, how many files is it stored in, and
+which digits each file contains.
+- Data file #1: contains digits
+...
+- Data file #n: contains digits.
+
+
+All these files will belong in one folder. This is how the files are called:
+FOLDER: .name/ (something like .39af200)
+- index.txt
+- 0.data
+- 1.data
+...
+- n.data
+
+**The index file should be the last one being written, in order to confirm that everything went alright without interruptions.
+
+
+
+
+
+######
+Concerning Task Management
+If we want to assign a task to a node, we do this in the log file
+
+Master-Node: assigning Task tatata to Slave-Node#k
+Slave-Node#k: Task tatata received
+
+The Task Manager should take into account the Latency and the Bandwidth between the Master and each Slave.
+If the connection is slow, then it assigns MORE tasks to the slave. That way, the slave spends less time
+communicating with the Master.
+If the connection is fast, then less tasks are assigned to the slave, since it wouldn't be much of a setback to
+comunicate with the master, so the slave can be reassigned work very quickly should the need arise.
+Note that we only care about the RELATIVE speed (Ah, this node is slower than the rest, or this one is faster than the rest)
+and NOT the absolute speed.
+Actually, absolute speed should also be coonsidered. If each and every connection is slow, then each
+node would need to be more autonomous.
+
+In order for the master to assess the speed of a connection, he can send a small packet of data to the slave,
+and the slave would immediately respond. That way, the master can assess the connection spped.
+
+Moreover, each Slave should immediately accept an order from the master for cancelation of an impending task,
+and also a task which is already running.
+
+Also, when the slave outputs to the log file that it completed a task, he should also indicate the time it took him
+to complete that task. That way, the Master can assess its average speed. The slave will indicate
+the time of starting the task, and the time of completing the task.
+This is also a way for us to assess (at the end of all the computations) how much time was spent doing what.
+
+Also, the slave should indicate if the task failed.
+
+In the case where the Master looses connection with a slave, or a slave does not respond within a reasonable period of time,
+say one or two minutes, the Master should see if he is ok. THe master should request the slave to recite all of his
+impending tasks. If he forgot them, well, he forgot them, and the master reassigns the lost tasks to other nodes.
+This means that every so often, the slaves should indicate to the master that everything is ok for them, say
+every 10, 30, 60 minutes or something.
+
+If a slave goes offline temporarily, he should continue working on the taskks appointed to him. Every node should be appointed
+lots of tasks to do in the case that they go offline and they finish their immediate tasks. So we have the
+present tasks queue, and the offline tasks queue. When the slave goes back online, he should report to the master everything
+he did (if he did anything at all). If the master finds that the slave did all his present tasks and several of the offline tasks,
+great! If the slave crashed and forgot all his tasks, that means that the master will now begin to distribute all the tasks appointed to him
+to other nodes, and perform a system check on the node. If the system is alright, then assign him new tasks. If not, put that in
+the status file.
+The offline queues for each node should be updated every so often, based on whether they are completed.
+Each node should have a MINIMUM number of offline tasks, but not necessarily a maximum.
+
+If a slave goes offline, and the master immediately needs one of the tasks appointed to the slave to be completed,
+then the master will reassign the needed tasks to other online computers, regardless of whether or not the slabve
+is currently working on it while offline.
+
+If the offline slave comes back online with his task completed, but other online slaves already did it, great! that serves as
+a confirmation.
+IF two nodes perform the same task, they should compare their results. If their results match, put it in the log file.
+If the results DONT match, put it in the log file, and also write it in the status file.
+
+Keep a track record of offline-offlinings for each slave to assess their reliability.
+####
+
+Suppose we have a Prod(a,b) partitioned into many partial products over several files. How will we
+multiply all those numbers?
+First off, each dump of digits should have a bigint MANTISSA, and an exponent n, so that the number represented
+would be MANTISSA * 2^n. That way, we don't have to store a lot of zeroes in disk.
+
+With that in mind, here is what we can do: Let's say we want to multiply A and B, here is what we do:
+Split the digits of A somewhere around the middle into the digits A_1 and the digits A_2, and the same with B,
+such that the following conditions hold:
+1) A_1 * 2^k_A + A_2 = A, and the same for B, where k is where the split was made
+2) The filesize for A_c * B_d is within a reasonable range.
+Imagine with this latice:
+____|A_1|A_2|
+|B_1|___|___|
+|B_2|___|___|
+
+The filesize for each one of the four resulting squares should be within our acceptable range (4MiB-8MiB or something).
+Actually, we don't split it exactly in half: we split however many times we need.
+Finally, sum up all the resulting files (this is easier).
+
+Note that even the final multiplication of two giant multi-file integers can be split into tasks of multiplying smaller integers.
+Actually, in order to do this, let's forget about a minimum file size, and only focus on a maximum file size. Let this be 16MiB, 2^34 Byytes.
+
