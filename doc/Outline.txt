@@ -14,14 +14,14 @@ decide which one of themselves will be the new director.
 
 Oh, we should divide our computers into groups, each one with one director.
 
-
-
 1: Algorithms
 
 1.1: Taylor Series
 
 Here is the formula to compute the digits:
-e = 1/n! * \sum_{k=0}^n \prod_{h=k+1}^n
+e = \sum_{k=0}^n 1/k!
+  = 1/n! * \sum_{k=0}^n n! / k!
+  = 1/n! * \sum_{k=0}^n \prod_{h=k+1}^n
 
 1.2: Lagrange Error Bound
 
@@ -47,7 +47,16 @@ Now, in order to actually write a program that can solve for the number n of ter
 take into account the accumulated error of the floating point representations.
 We can use GMP Floating Points in order to have better precision.
 
-Just in case one of the digits further down changes one of the digits further up (e.g. 3999 --> 4000),
+Now, our final result for the summatory will be in the order of magnitude of 10^12.
+Let's round that up to 10^13.
+Therefore, in order to maintain the integer digits unharmed, we would like a precision of 10^26.
+If we take the log2, we get around 86.370, but let's round that up to 128.
+Therefore, we would like to floating points of precision of 128 bits at least.
+But it wouldn't hurt to round up even further to 256 bits.
+
+We must use gmpfr because they have natural logarithms.
+
+Also, Just in case one of the digits further down changes one of the digits further up (e.g. 3999 --> 4000),
 we should add, say, 32 digits in addition to the required digits. That's a long and unlikely trail of 9's!
 
 2: Distributed Computing
