@@ -1,3 +1,5 @@
+0: Overview
+
 I want to calculate the constant e to one trillion digits.
 To do that, I plan on having multiple computers working together in order to solve the problem.
 Comp#1: You sum up the term #193220 to #203230949
@@ -14,20 +16,41 @@ Oh, we should divide our computers into groups, each one with one director.
 
 
 
+1: Algorithms
 
-#####
+1.1: Taylor Series
+
+Here is the formula to compute the digits:
+e = 1/n! * \sum_{k=0}^n \prod_{h=k+1}^n
+
+1.2: Lagrange Error Bound
 
 Using the Lagrange error bound, we get
 R_n(x) = f^(n+1)(c)/(n+1)! * (x-a)^(n+1), for a is the center, for c between x and a. n is the nth taylor polynomial.
 Now, we let f(x)=e^x,  x=1, and a=0. Thus,
 R_n(1) = e^c/(n+1)! <= e/(n+1)!
-We want our error R to be R<= 10^(-10^12), so
-e/(n+1)! <= 10^(-10^12)
+We want our error R to be R < 10^(-10^12), so
+e/(n+1)! < 10^(-10^12)
 \implies
-e * 10^trillion <= (n+1)!
+e * 10^trillion < (n+1)!
+Which implies
+
+1 + 10^12 * ln(10) < \sum_{k=0}^{n+1} ln(k)
+
+Now, in the summatory in the left side, it's not bad to have one extra term, by letting m = n + 1, and making
+m the actual number of terms we use. So this formula simplifies to
+1 + 10^12 * ln(10) < \sum_{k=0}^n ln(k).
 
 If we solve that inequality, we obtain the number n of terms.
 
+Now, in order to actually write a program that can solve for the number n of terms, we need to
+take into account the accumulated error of the floating point representations.
+We can use GMP Floating Points in order to have better precision.
+
+Just in case one of the digits further down changes one of the digits further up (e.g. 3999 --> 4000),
+we should add, say, 32 digits in addition to the required digits. That's a long and unlikely trail of 9's!
+
+2: Distributed Computing
 
 We might want to have multiple computers work together in order to compute the factorials.
 Also, we might want to save the factorials somewhere in the network (at multiple places,
@@ -38,17 +61,12 @@ And that if a node goes online, she is immediately assigned a group and a task t
 
 RESOURCES SHOULD NOT BE LEFT IDLE
 
-
-
 Also, a computer should be able to work offline. Even if it works on the same problem as another computer online,
 that is good because it means the result is doubly verified.
 
 A computer shoud work offline, save the results locally, and send them on the network once it goes back online.
 
-
-#####
-Here is the formula we will use in order to compute e:
-e = 1/n! * \sum_{k=0}^n \prod_{h=k+1}^n
+3: Task Management
 
 Now, we should divide this into small tasks. Then we would write onto disk the partial results of
 multiplications in files of size 4MiB - 8MiB. We do this in order to not use all of RAM.
@@ -70,7 +88,6 @@ Moreover, there should be a Task Queue file.
 
 More on Tasks:
 
-
 Process to compute Prod(a,b) (multiply every number between a and b inclusive)
 - Start from a, and then compute the binary digits of the partial products.
 Once the binary digits reach a certain threshold at Prod(a,k), append
@@ -90,7 +107,6 @@ which digits each file contains.
 ...
 - Data file #n: contains digits.
 
-
 All these files will belong in one folder. This is how the files are called:
 FOLDER: .name/ (something like .39af200)
 - index.txt
@@ -101,11 +117,6 @@ FOLDER: .name/ (something like .39af200)
 
 **The index file should be the last one being written, in order to confirm that everything went alright without interruptions.
 
-
-
-
-
-######
 Concerning Task Management
 If we want to assign a task to a node, we do this in the log file
 
@@ -161,6 +172,9 @@ IF two nodes perform the same task, they should compare their results. If their 
 If the results DONT match, put it in the log file, and also write it in the status file.
 
 Keep a track record of offline-offlinings for each slave to assess their reliability.
+
+Each process should be able to "checkpoint". That means that it  creates an image of itself at that instant,
+so if it is killed, it could simply resume from where it left off.
 ####
 
 Suppose we have a Prod(a,b) partitioned into many partial products over several files. How will we
@@ -184,4 +198,5 @@ Finally, sum up all the resulting files (this is easier).
 
 Note that even the final multiplication of two giant multi-file integers can be split into tasks of multiplying smaller integers.
 Actually, in order to do this, let's forget about a minimum file size, and only focus on a maximum file size. Let this be 16MiB, 2^34 Byytes.
+
 
