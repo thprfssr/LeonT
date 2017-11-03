@@ -64,7 +64,47 @@ It will finish in 28 hours, I estimate.
 Therefore, we will have to take another approach.
 Okay, so for double precision in C, the mantissa is 52 bits. That means that
 for every term, there is a +/- 2^(-52) * 2^d error, where d is the exponent.
-the error
+the error.
+
+1.3 Number of Terms
+
+We want to solve for the smallest integer which satisfies:
+1 + D * ln(10) < \sum_{k=1)^n ln(k).
+Consider the following inequality:
+ceil(1 + D * ln(10)) < \sum_{k=1}^n floor(ln(k)).
+Then, m < n, since a larger number of terms would need to be summed. This inequality
+can be solved easily, rapidly, and precisely by using a big integer library. Once we
+solve it, we obtain m, which is an upper bound for n.
+
+Now, a double precision floating point has a 52-bit mantissa. The mantissa of the
+output of the log function in the C math library depends on the size of the integer
+part of the output. For example,
+log(10^11) = 11 * log(10) = 25.328436... < 26 = 0b11010,
+which has 5 bits, so there are 52 - 5 = 48 bits left for the fractional part. That
+means that the error R satisfies R < 2^(-48).
+
+So once we find m, we find B = ceil(log2(m)), which will be the bitcount for the
+integer part of m, and we assume that each term in the first inequality has error
+2^(B-52). Multiply by the amount of terms, and we obtain R = m * 2^(B-52). Notice
+that this is more than the actual error, which is good; we want to overestimate the
+error.
+
+Now, it should be pointed out that when D = 10^12, which accounts for the first
+trillion decimal digits of e, m is less than 10^11. If we let m = 10^11, then we get
+log(10^11) < 26 = 0b11010, as we saw earlier. Then, we just repeat the same
+procedure and we get R < 10^11 * 2^(-48) = 10^(-4) * 3.5527..., which means that the
+error of the summatory in the first inequality is negligible.
+
+If we are really worried about error, it suffices to just apply the floor of the
+whole summatory to force it to add more terms according to the error. Moreover,
+since the logarithm grows very slowly, it will take a LONG time for the error for
+each individual term to grow larger than just a fractional part. Thus, just taking
+the ceiling of the entire summatory suffices for all practical purposes (say, for
+computing the first QUINTILLION digits of e). So in the end, the equation we really
+care about is the following:
+ceil(1 + D * ln(10)) < floor(\sum_{k=1}^n ln(k)).
+
+So, in the end,
 
 2: Distributed Computing
 
