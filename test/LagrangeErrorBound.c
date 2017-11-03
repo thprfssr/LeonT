@@ -4,14 +4,13 @@
  * digits of e.
  *
  * We use the inequality
- * 1 + 10^12 * ln(10) < \sum_{k=0}^n ln(k)
+ * 1 + D * ln(10) < \sum_{k=0}^n ln(k)
  * and solve for n.
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
 #include <gmp.h>
+#include <mpfr.h>
 
 int main(int argc, char **argv)
 {
@@ -24,55 +23,67 @@ int main(int argc, char **argv)
 	}
 	else
 	{
+		//We set the default MPFR precision to be 256 bits
+		//in order to counteract significant rounding errors.
+		mpfr_set_default_prec(256);
+		
 		//We set the desired number of decimal digits.
 		//Interpret argv[1] in base 10, and copy
 		//it to D.
 		mpz_t D;
 		mpz_init_set_str(D, argv[1], 10);
 
-		//We set GMP Float default precision to 256 bits
-		//in order to counteract round-off errors.
-		mpf_set_default_prec(256);
-
-		//We set A equal to the left side of the inequality
-		mpf_t A;
-		mpf_init(A);
+		//We perform acrobacies in order to
+		//set A equal to the left side of the inequality,
+		//rounding towards positive infinity in order
+		//to have more terms at the end.
+		mpfr_t A;
+		mpfr_init_set_ui(A, 10, GMP_RNDU);
+		mpfr_log(A, A, GMP_RNDU);
+		mpfr_mul_z(A, A, D, GMP_RNDU);
+		mpfr_add_ui(A, A, 1, GMP_RNDU);
 
 		//We instantiate sum, which will hold the left
 		//side of the inequality once the loop is finished.
-		mpf_t sum;
-		mpf_init(sum);
-
-		//We declare these variables in order to show the
-		//real-time status of the computation.
-		float f;
-
+		//We set it to round towards minus infinity in order
+		//to force the program to add more terms.
+		mpfr_t sum;
+		mpfr_init_set_ui(sum, 0, GMP_RNDD);	
+		
 		mpz_t i;
 		mpz_init_set_ui(i, 1);
 		//The loop will break when A < sum
-		while(mpz_cmp(A, sum) >= 0)
+		while(mpfr_cmp(A, sum) >= 0)
 		{
-			mpf_add(sum, sum,
-
-			double c = mpz_get_d(counter);
-			//This takes care of the summatory
-			mpz_add_ui(sum, sum, (unsigned long int) floor(log(c)));
+			//We do acrobacies in order to take
+			//care of the summatory.
+			mpfr_t tmp;
+			mpfr_init_set_z(tmp, i, GMP_RNDN);
+			mpfr_t logarithm;
+			mpfr_init(logarithm);
+			mpfr_log(logarithm, tmp, GMP_RNDD);
+			mpfr_add(sum, sum, logarithm, GMP_RNDD);
+			mpfr_clear(tmp);
+			mpfr_clear(logarithm);
 
 			//Since the computation takes a long time,
 			//we give real-time feedback for the user
 			//every certain number of iterations.
-			if(mpz_divisible_ui_p(counter, 100000000) != 0)
+			if(mpz_divisible_ui_p(i, 1000000) != 0)
 			{
-				f = (float) c / 1.0e+09;
-				gmp_printf("%f Billion : %Zd\n", f, sum);
+				double f = mpz_get_d(i) / 1.0e+09;
+
+				double sum_d = mpfr_get_d(sum, GMP_RNDN);
+
+				gmp_printf("%f Billion : %f\n", f, sum_d);
 			}
 
 			//Increment the counter
-			mpz_add_ui(counter, counter, 1);
+			mpz_add_ui(i, i, 1);
 		}
 
 		//Finally, we print the solution.
-		gmp_printf("For D = %Zd digits, we need n = %Zd terms\n", D, counter);
+		gmp_printf("For D = %Zd digits, we need n = %Zd terms\n", D, i);
 	}
 
 	return 0;

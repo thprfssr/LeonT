@@ -59,6 +59,13 @@ We must use gmpfr because they have natural logarithms.
 Also, Just in case one of the digits further down changes one of the digits further up (e.g. 3999 --> 4000),
 we should add, say, 32 digits in addition to the required digits. That's a long and unlikely trail of 9's!
 
+Ok, so I just tested the program that uses MPFR, and it's super slow!
+It will finish in 28 hours, I estimate.
+Therefore, we will have to take another approach.
+Okay, so for double precision in C, the mantissa is 52 bits. That means that
+for every term, there is a +/- 2^(-52) * 2^d error, where d is the exponent.
+the error
+
 2: Distributed Computing
 
 We might want to have multiple computers work together in order to compute the factorials.
