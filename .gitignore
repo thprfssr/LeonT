@@ -1,5 +1,5 @@
-bin
-bin/*
 log
 test
 test/*
+*.o
+LagrangeErrorBound
