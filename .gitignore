@@ -1,0 +1,5 @@
+bin
+bin/*
+log
+test
+test/*
