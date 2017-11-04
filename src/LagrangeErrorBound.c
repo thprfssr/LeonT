@@ -39,9 +39,13 @@ int main(int argc, char **argv)
 		double sum = 0.0;
 		double B = floor(sum);
 
-		//Open log file
+		//Open log file, and disable buffering
+		//so thatit writes directly to the file instead
+		//of to a buffer. Had we used a buffer, we would
+		//have had to wait for the program to end.
 		FILE *logfile;
 		logfile = fopen("log", "w");
+		setbuf(logfile, NULL);
 
 		//The loop will break when A < B.
 		unsigned long long int i = 1;
