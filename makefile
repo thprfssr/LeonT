@@ -1,2 +1,11 @@
-bin/LagrangeErrorBound: src/LagrangeErrorBound.c
-	gcc -lm src/LagrangeErrorBound.c -o bin/LagrangeErrorBound
+CC=gcc
+objects = LagrangeErrorBound.o
+
+LagrangeErrorBound: $(objects)
+	$(CC) -lm -o LagrangeErrorBound $(objects)
+
+LagrangeErrorBound.o:
+
+.PHONY: clean
+clean:
+	rm LagrangeErrorBound $(objects)
