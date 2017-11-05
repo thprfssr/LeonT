@@ -204,7 +204,25 @@ arithmetic on integers saved throughout multiple files.
 
 1.6.1: Addition
 
+We will divide up our integers into files of exactly 16MiB (the most
+significant bits will be filled with zeros as needed). For each file, we can
+copy it from storage to RAM for use. We will only work on one file at a time to
+ensure that we don't blow up RAM. For each file, we will create an MPZ object
+to work with.
+
+In order to refer to an integer partitioned into several files, we will create
+a plain text file, called an index, which will contain the number of files
+associated with the integer, and the name for each file (which will just be the
+hash of the contents).
+
 1.6.2: Multiplication
+
+Multiplication is just addition with bitshifting. Example:
+
+A * 1101 = A * 1000 + A * 100 + A * 1;
+
+We will implement multiplication in two ways: The Addition way, and the Lattice
+way. Whichever way is faster is the one that we will use.
 
 2: Distributed Computing
 
