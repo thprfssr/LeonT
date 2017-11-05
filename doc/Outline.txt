@@ -412,3 +412,17 @@ In the table of tasks, where we put information about each task (e.g. whether
 it was completed, verified, assigned, if it was supposedly completed but there
 are missing files, who completed it, etc.), we should also write a list of
 data files associated with the task.
+
+Each integer's files will be stored in a folder. The integer's data will be
+stored in files whose name is the hash of its contents. In the folder, there
+will be a special file called "index" which is structured as follows:
+[number of files for the integer, excluding the index]
+[name of datafile #1 (least significant)]
+[name of datafile #2]
+...
+[name of datafile #k]
+[hash of concatenation of filenames]
+
+In the end, we will have the hash of the concatenation of filenames in order
+to prove that everything went well and with no interruptions. If that line is
+not present, then we know that something went wrong.
