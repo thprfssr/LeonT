@@ -8,4 +8,4 @@ LagrangeErrorBound.o:
 
 .PHONY: clean
 clean:
-	rm LagrangeErrorBound $(objects)
+	rm LagrangeErrorBound $(objects) log
