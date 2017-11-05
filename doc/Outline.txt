@@ -1,16 +1,16 @@
 0: Overview
 
-I want to calculate the constant e to one trillion digits.
-To do that, I plan on having multiple computers working together in order to solve the problem.
+I want to calculate the constant e to one trillion digits. To do that, I plan on
+having multiple computers working together in order to solve the problem.
 Comp#1: You sum up the term #193220 to #203230949
 ...
 Comp#k: Compile the results from these computers, and give me a decimal expansion.
 ..
 
-To do that, I assume we need a hierarchy of director computers, to determine which tasks
-to divide between which computers. We should also have a director of directors.
-Also, if a director goes offline, the group of computers it used to direct should
-decide which one of themselves will be the new director.
+To do that, I assume we need a hierarchy of director computers, to determine which
+tasks to divide between which computers. We should also have a director of
+directors. Also, if a director goes offline, the group of computers it used to
+direct should decide which one of themselves will be the new director.
 
 Oh, we should divide our computers into groups, each one with one director.
 
@@ -71,7 +71,7 @@ the error.
 We want to solve for the smallest integer which satisfies:
 1 + D * ln(10) < \sum_{k=1)^n ln(k).
 Consider the following inequality:
-ceil(1 + D * ln(10)) < \sum_{k=1}^n floor(ln(k)).
+ceil(1 + D * ln(10)) < \sum_{k=1}^m floor(ln(k)).
 Then, m < n, since a larger number of terms would need to be summed. This inequality
 can be solved easily, rapidly, and precisely by using a big integer library. Once we
 solve it, we obtain m, which is an upper bound for n.
@@ -103,8 +103,6 @@ the ceiling of the entire summatory suffices for all practical purposes (say, fo
 computing the first QUINTILLION digits of e). So in the end, the equation we really
 care about is the following:
 ceil(1 + D * ln(10)) < floor(\sum_{k=1}^n ln(k)).
-
-So, in the end,
 
 2: Distributed Computing
 
@@ -255,4 +253,23 @@ Finally, sum up all the resulting files (this is easier).
 Note that even the final multiplication of two giant multi-file integers can be split into tasks of multiplying smaller integers.
 Actually, in order to do this, let's forget about a minimum file size, and only focus on a maximum file size. Let this be 16MiB, 2^34 Byytes.
 
+3.1: Task Management Requirements
 
+The part of the program which will take care of tasks should do the following:
+-Compute what tasks will need to be done
+-Figure out which tasks depend on which other tasks
+-Track which tasks have been completed
+
+4: Logging
+
+Our program will need to keep one or more log files. To do that, we can use
+syslog. How many log files will we need? I think one suffices. We would use this log
+file in order to keep track of which nodes enter and leave the network, which nodes
+are unresponsive, which tasks are declared by the master, which tasks are assigned
+to which nodes, which tasks are started being solved by which nodes, which tasks are
+completed by which nodes, which tasks were interrupted or lost (determined by the
+master), etc. Therefore, this is a general log file.
+
+This log file must NEVER be deleted! Else, we would have to start over in
+computing e. Our data from previous calculations would be intact, but we wouldn't
+know what to do with it.
