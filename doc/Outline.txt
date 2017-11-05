@@ -14,6 +14,13 @@ direct should decide which one of themselves will be the new director.
 
 Oh, we should divide our computers into groups, each one with one director.
 
+I don't wanna do this across the Internet, since there are security risk
+associated with data transmission. I don't wanna mess up my friends' computers.
+What I wanna do is to use a local network of computers.
+
+If I really wanna do this across the Internet, I need to learn more about
+Internet security.
+
 1: Algorithms
 
 1.1: Taylor Series
@@ -21,7 +28,9 @@ Oh, we should divide our computers into groups, each one with one director.
 Here is the formula to compute the digits:
 e = \sum_{k=0}^n 1/k!
   = 1/n! * \sum_{k=0}^n n! / k!
-  = 1/n! * \sum_{k=0}^n \prod_{h=k+1}^n
+  = 1/n! * \sum_{k=0}^n \prod_{h=k+1}^n h
+
+*This is wrong. Try looking at the terms more concretely.
 
 1.2: Lagrange Error Bound
 
@@ -103,6 +112,99 @@ the ceiling of the entire summatory suffices for all practical purposes (say, fo
 computing the first QUINTILLION digits of e). So in the end, the equation we really
 care about is the following:
 ceil(1 + D * ln(10)) < floor(\sum_{k=1}^n ln(k)).
+
+1.4: Main Loop
+
+Our program will have two main parts. The first part is to compute a rational number
+which approximates exp(1) to the desired number of digits. The second part will
+compute another rational number which will approximate exp(-1). Finally, it will
+compare the digits of both; if the digits are all the same, we have success. Else,
+we have to go back to the planning board.
+
+For each of the two parts, our program will first compute a numerator, then a
+denominator, and finally, it will divide these two integers to obtain the digits.
+In order to compute the numerator for the exp(1) part, assuming that n is the
+required number of terms, the pseudocode is as follows:
+
+int getNumerator(int n)
+{
+	int sum = 0;
+	int product = 1;
+
+	for(int i = 0; i < n; i++)
+	{
+		for(int j = n; j >= n - i; j++)
+		{
+			product *= j;
+		}
+
+		sum += product;
+	}
+
+	sum += 1 + n!;
+
+	return sum;
+}
+
+This code is absolutely correct; double check it, if you don't trust me.
+
+Now, let's analyze the code. In the loops, we're essentially computing this:
+(n) +
+(n)(n-1) +
+(n)(n-1)(n-2) +
+... +
+(n)(n-1)(n-2)...(3) +
+(n)(n-1)(n-2)...(3)(2) +
+(n)(n-1)(n-2)...(3)(2)(1)
+
+So we need to define a function prod(int a, int b) which takes arguments a < b,
+and is defined as follows:
+
+int prod(int a, int b)
+{
+	int product = 1;
+
+	for(int i = a; i <= b; i++)
+	{
+		product *= i;
+	}
+
+	return product;
+}
+
+Back to our getNumerator function, notice that as the loop progresses, we have
+to multiply bigger and bigger numbers. I intentionally made it so that the easy
+computations are the ones which get done first, so that as the loop progresses,
+we get closer and closer to the factorial of n.
+
+Actually, we don't have to sum these terms in order; we can just declare a task
+which consists of adding a given term (or several of them) to the main
+numerator file.
+
+1.5: Splitting Productories into Tasks
+
+Now, we must find a way to split the prod(a,b) into tasks, because we're
+dealing with large numbers here. What I propose is to compute the bitcount for
+prod(k,n), where we let k vary. Once we find the k closest to n for which the
+bitcount is less than 16 MiB (2^24 B), we declare that as a task. Actually, we
+don't wanna compute the actual bitcount of the product, since that requires
+knowing the product in advance. What we wanna do is to compute a bitcount upper
+bound for a productory, which is easier to implement. Namely, the bitcount of
+an integer n is simply the floor of the base 2 logarithm. Therefore, we have:
+
+bitcountUpperBound( (a)(a+1)(a+2)...(b-2)(b-1)(b) )
+= floor( ceil(log2(a)) + ceil(log2(a+1)) + ... + ceil(log2(b)) );
+
+Notice that we want to save some results on disk so that we don't have to
+compute them all over again. This complicates our task division. Actually,
+before proceeding any further, we have to master the art of performing
+arithmetic on integers saved throughout multiple files.
+
+1.6: Arithmetic on Integers Saved throughout Multiple Files
+
+1.6.1: Addition
+
+1.6.2: Multiplication
 
 2: Distributed Computing
 
@@ -267,9 +369,28 @@ syslog. How many log files will we need? I think one suffices. We would use this
 file in order to keep track of which nodes enter and leave the network, which nodes
 are unresponsive, which tasks are declared by the master, which tasks are assigned
 to which nodes, which tasks are started being solved by which nodes, which tasks are
-completed by which nodes, which tasks were interrupted or lost (determined by the
+completed by which nodes, which tasks have been verified by which nodes, which tasks were interrupted or lost (determined by the
 master), etc. Therefore, this is a general log file.
 
 This log file must NEVER be deleted! Else, we would have to start over in
 computing e. Our data from previous calculations would be intact, but we wouldn't
 know what to do with it.
+
+4.1: Log file
+The master node should be the only node writing into the log file. The rest of
+the nodes must pass their messages to the master in  order for him to write.
+We do this in order to eliminate the possibility of having multiple nodes write
+to the log file at the same time, possibly corrupting it.
+
+5: Data Storage
+
+We will dump all our data into binary blobs less than 2^24 Bytes, or 16MiB.
+The name of each file will be the hash of its contents. That way, we can ensure
+that the data in the file is not accidentally altered or corrupted. Now, the
+interpretation of the data, and what to do with it, that is up to the master
+node to figure out.
+
+In the table of tasks, where we put information about each task (e.g. whether
+it was completed, verified, assigned, if it was supposedly completed but there
+are missing files, who completed it, etc.), we should also write a list of
+data files associated with the task.
