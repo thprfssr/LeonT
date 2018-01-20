@@ -182,7 +182,8 @@ a plain text file, called an index, which will contain the number of files
 associated with the integer, the name for each file (which will just be the
 hash of the contents), and the hash of the concatenation of all the filenames
 excluding the index, in order to verify that all files are intact. Finally,
-all these files should exist in a common folder: one for each integer.
+there should be one folder for the integer data, and another folder for the
+index files.
 
 Now, the integer data will be stored in data blobs. It is up to the system to
 interpret what each blob represents, and determine what to do with each blob.
