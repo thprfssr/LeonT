@@ -171,7 +171,7 @@ numerator file.
 
 1.4: Arithmetic on Integers Saved throughout Multiple Files
 
-We will divide up our integers into files of exactly 16MiB (the most
+We will divide up our integers into files of exactly 4KiB (the most
 significant bits will be filled with zeros as needed). For each file, we can
 copy it from storage to RAM for use. We will only work on one file at a time to
 ensure that we don't blow up RAM. For each file, we will create an MPZ object
