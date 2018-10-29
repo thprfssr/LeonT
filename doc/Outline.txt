@@ -1,25 +1,7 @@
-0: Overview
+OVERVIEW
 
 I want to calculate the constant e to one trillion digits. To do that, I plan on
 having multiple computers working together in order to solve the problem.
-Comp#1: You sum up the term #193220 to #203230949
-...
-Comp#k: Compile the results from these computers, and give me a decimal expansion.
-..
-
-To do that, I assume we need a hierarchy of director computers, to determine which
-tasks to divide between which computers. We should also have a director of
-directors. Also, if a director goes offline, the group of computers it used to
-direct should decide which one of themselves will be the new director.
-
-Oh, we should divide our computers into groups, each one with one director.
-
-I don't wanna do this across the Internet, since there are security risk
-associated with data transmission. I don't wanna mess up my friends' computers.
-What I wanna do is to use a local network of computers.
-
-If I really wanna do this across the Internet, I need to learn more about
-Internet security.
 
 1: Algorithms
 
@@ -35,96 +17,102 @@ e = \sum_{k=0}^n 1/k!
 1.2: Lagrange Error Bound
 
 Using the Lagrange error bound, we get
-R_n(x) = f^(n+1)(c)/(n+1)! * (x-a)^(n+1), for a is the center, for c between x and a. n is the nth taylor polynomial.
-Now, we let f(x)=e^x,  x=1, and a=0. Thus,
+
+R_n(x) = f^(n+1)(c)/(n+1)! * (x-a)^(n+1),
+
+where a is the center, c is between x and a, and n is the n-th taylor
+polynomial. Now, we let f(x)=e^x,  x=1, and a=0. Thus,
+
 R_n(1) = e^c/(n+1)! <= e/(n+1)!
-We want our error R to be R < 10^(-10^12), so
-e/(n+1)! < 10^(-10^12)
-\implies
-e * 10^trillion < (n+1)!
-Which implies
 
-1 + 10^12 * ln(10) < \sum_{k=0}^{n+1} ln(k)
+We want our error R to be R < 10^(-D), where D is the number of desired digits.
+Thus, we get
 
-Now, in the summatory in the left side, it's not bad to have one extra term, by letting m = n + 1, and making
-m the actual number of terms we use. So this formula simplifies to
-1 + 10^12 * ln(10) < \sum_{k=0}^n ln(k).
+e/(n+1)! < 10^(-D),
 
-If we solve that inequality, we obtain the number n of terms.
+which implies that
 
-Now, in order to actually write a program that can solve for the number n of terms, we need to
-take into account the accumulated error of the floating point representations.
-We can use GMP Floating Points in order to have better precision.
+e * 10^D < (n+1)!,
 
-Now, our final result for the summatory will be in the order of magnitude of 10^12.
-Let's round that up to 10^13.
-Therefore, in order to maintain the integer digits unharmed, we would like a precision of 10^26.
-If we take the log2, we get around 86.370, but let's round that up to 128.
-Therefore, we would like to floating points of precision of 128 bits at least.
-But it wouldn't hurt to round up even further to 256 bits.
+which itself implies
 
-We must use gmpfr because they have natural logarithms.
+1 + D * ln(10) < \sum_{k=1}^{n+1} ln(k)
 
-Also, Just in case one of the digits further down changes one of the digits further up (e.g. 3999 --> 4000),
-we should add, say, 32 digits in addition to the required digits. That's a long and unlikely trail of 9's!
+Now, in the summatory in the right side, it's never bad to force the system to
+compute one extra term, so we let m = n + 1, and replace n with m. Hence,
 
-Ok, so I just tested the program that uses MPFR, and it's super slow!
-It will finish in 28 hours, I estimate.
-Therefore, we will have to take another approach.
-Okay, so for double precision in C, the mantissa is 52 bits. That means that
-for every term, there is a +/- 2^(-52) * 2^d error, where d is the exponent.
-the error.
+1 + D * ln(10) < \sum_{k=0}^n ln(k).
 
-1.3 Number of Terms
+If we solve that inequality, we obtain the number n of terms. We need to write
+a program which solves that inequality. Moreover, if the user wants D decimal
+digits, we won't plug D directly into our program. Instead, we want to
+overestimate D by a sufficient amount, like 32 digits.
 
-We want to solve for the smallest integer which satisfies:
+Suppose that in our digits, there is a long stretch of 9's, but if we had just
+added one more term, all those 9's would carry over, producing a long stretch
+of 0's. That is catastrophic! That means that our digits (the ones with the
+long stretch of 9's) would be inaccurate. In order to minimize the chances of
+a situation like that, we plug D + 32 into our function. The only way that the
+above scenario can occur is if there is a (highly unlikely) stretch of
+thirty-two 9's.
+
+1.2 Number of Required Terms
+
+We want to solve for the smallest integer which satisfies
+
 1 + D * ln(10) < \sum_{k=1)^n ln(k).
+
 Consider the following inequality:
+
 ceil(1 + D * ln(10)) < \sum_{k=1}^m floor(ln(k)).
-Then, m < n, since a larger number of terms would need to be summed. This inequality
-can be solved easily, rapidly, and precisely by using a big integer library. Once we
-solve it, we obtain m, which is an upper bound for n.
 
-Now, a double precision floating point has a 52-bit mantissa. The mantissa of the
-output of the log function in the C math library depends on the size of the integer
-part of the output. For example,
+Then, m < n, since a larger number of terms would need to be summed. This
+inequality can be solved easily, rapidly, and precisely by using a big integer
+library. Once we solve it, we obtain m, which is an upper bound for n.
+
+Now, a double precision floating point has a 52-bit mantissa. The mantissa of
+the output of the log function in the C math library depends on the size of the
+integer part of the output. For example,
+
 log(10^11) = 11 * log(10) = 25.328436... < 26 = 0b11010,
-which has 5 bits, so there are 52 - 5 = 48 bits left for the fractional part. That
-means that the error R satisfies R < 2^(-48).
 
-So once we find m, we find B = ceil(log2(m)), which will be the bitcount for the
-integer part of m, and we assume that each term in the first inequality has error
-2^(B-52). Multiply by the amount of terms, and we obtain R = m * 2^(B-52). Notice
-that this is more than the actual error, which is good; we want to overestimate the
-error.
+which has 5 bits, so there are 52 - 5 = 48 bits left for the fractional part.
+That means that the error R satisfies R < 2^(-48).
+
+So once we find m, we find B = ceil(log2(m)), which will be the bitcount for
+the integer part of m, and we assume that each term in the first inequality has
+error 2^(B-52). Multiply by the amount of terms, and we obtain R = m * 2^(B-52).
+Notice that this is more than the actual error, which is good; we want to
+overestimate the error.
 
 Now, it should be pointed out that when D = 10^12, which accounts for the first
-trillion decimal digits of e, m is less than 10^11. If we let m = 10^11, then we get
-log(10^11) < 26 = 0b11010, as we saw earlier. Then, we just repeat the same
-procedure and we get R < 10^11 * 2^(-48) = 10^(-4) * 3.5527..., which means that the
-error of the summatory in the first inequality is negligible.
+trillion decimal digits of e, m is less than 10^11. If we let m = 10^11, then we
+get log(10^11) < 26 = 0b11010, as we saw earlier. Then, we just repeat the same
+procedure and we get R < 10^11 * 2^(-48) = 10^(-4) * 3.5527..., which means that
+the error of the summatory in the first inequality is negligible.
 
 If we are really worried about error, it suffices to just apply the floor of the
 whole summatory to force it to add more terms according to the error. Moreover,
-since the logarithm grows very slowly, it will take a LONG time for the error for
-each individual term to grow larger than just a fractional part. Thus, just taking
-the ceiling of the entire summatory suffices for all practical purposes (say, for
-computing the first QUINTILLION digits of e). So in the end, the equation we really
-care about is the following:
+since the logarithm grows very slowly, it will take a LONG time for the error
+for each individual term to grow larger than just a fractional part. Thus, just
+taking the ceiling of the entire summatory suffices for all practical purposes
+(say, for computing the first QUINTILLION digits of e). So in the end, the
+equation we really care about is the following:
+
 ceil(1 + D * ln(10)) < floor(\sum_{k=1}^n ln(k)).
 
-1.4: Main Loop
+1.3: Main Loop
 
-Our program will have two main parts. The first part is to compute a rational number
-which approximates exp(1) to the desired number of digits. The second part will
-compute another rational number which will approximate exp(-1). Finally, it will
-compare the digits of both; if the digits are all the same, we have success. Else,
-we have to go back to the planning board.
+Our program will have two main parts. The first part is to compute a rational
+number which approximates exp(1) to the desired number of digits. The second
+part will compute another rational number which will approximate exp(-1).
+Finally, it will compare the digits of both; if the digits are all the same, we
+have success. Else, we have to go back to the planning board.
 
 For each of the two parts, our program will first compute a numerator, then a
-denominator, and finally, it will divide these two integers to obtain the digits.
-In order to compute the numerator for the exp(1) part, assuming that n is the
-required number of terms, the pseudocode is as follows:
+denominator, and finally, it will divide these two integers to obtain the
+digits. In order to compute the numerator for the exp(1) part, assuming that n
+is the required number of terms, the pseudocode is as follows:
 
 int getNumerator(int n)
 {
@@ -181,103 +169,121 @@ Actually, we don't have to sum these terms in order; we can just declare a task
 which consists of adding a given term (or several of them) to the main
 numerator file.
 
-1.5: Splitting Productories into Tasks
+1.4: Arithmetic on Integers Saved throughout Multiple Files
 
-Now, we must find a way to split the prod(a,b) into tasks, because we're
-dealing with large numbers here. What I propose is to compute the bitcount for
-prod(k,n), where we let k vary. Once we find the k closest to n for which the
-bitcount is less than 16 MiB (2^24 B), we declare that as a task. Actually, we
-don't wanna compute the actual bitcount of the product, since that requires
-knowing the product in advance. What we wanna do is to compute a bitcount upper
-bound for a productory, which is easier to implement. Namely, the bitcount of
-an integer n is simply the floor of the base 2 logarithm. Therefore, we have:
+We will divide up our integers into files of exactly 4KiB (the most
+significant bits will be filled with zeros as needed). For each file, we can
+copy it from storage to RAM for use. We will only work on one file at a time to
+ensure that we don't blow up RAM. For each file, we will create an MPZ object
+to work with.
 
-bitcountUpperBound( (a)(a+1)(a+2)...(b-2)(b-1)(b) )
-= floor( ceil(log2(a)) + ceil(log2(a+1)) + ... + ceil(log2(b)) );
+In order to refer to an integer partitioned into several files, we will create
+a plain text file, called an index, which will contain the number of files
+associated with the integer, the name for each file (which will just be the
+hash of the contents), and the hash of the concatenation of all the filenames
+excluding the index, in order to verify that all files are intact. Finally,
+there should be one folder for the integer data, and another folder for the
+index files.
 
-Notice that we want to save some results on disk so that we don't have to
-compute them all over again. This complicates our task division. Actually,
-before proceeding any further, we have to master the art of performing
-arithmetic on integers saved throughout multiple files.
+Now, the integer data will be stored in data blobs. It is up to the system to
+interpret what each blob represents, and determine what to do with each blob.
 
-1.6: Arithmetic on Integers Saved throughout Multiple Files
+1.4.1: Addition
 
-1.6.1: Addition
+1.4.2: Multiplication
 
-1.6.2: Multiplication
+Multiplication is just addition with bitshifting. Example:
 
-2: Distributed Computing
+A * 1101 = A * 1000 + A * 100 + A * 1;
 
-We might want to have multiple computers work together in order to compute the factorials.
-Also, we might want to save the factorials somewhere in the network (at multiple places,
-in case one or more computers go offline) so that we will not have to recalculate it.
+We will implement multiplication in two ways: The Addition way, and the Lattice
+way. Whichever way is faster is the one that we will use.
 
-The network should be such that if a node goes offline, the network should not be severely affected.
-And that if a node goes online, she is immediately assigned a group and a task to work with.
+2: Parallelization
 
-RESOURCES SHOULD NOT BE LEFT IDLE
+It would be advantageous to have a parallel system which can perform multiple
+things at the same time, rather than a purely sequential system which only
+performs one task at a time.
 
-Also, a computer should be able to work offline. Even if it works on the same problem as another computer online,
-that is good because it means the result is doubly verified.
+KEYWORD: task.
 
-A computer shoud work offline, save the results locally, and send them on the network once it goes back online.
+We want to find a way to break our work into small tasks which can be assigned
+to various nodes in a Beowulf cluster. We need to find a way to parallelize our
+program.
 
-3: Task Management
+*The slaves should confirm to the master that they accepted the tasks assigned
+to them
+*The Master is the one that determines which tasks are necessary
+*He should also determine which tasks depend on which other tasks
 
-Now, we should divide this into small tasks. Then we would write onto disk the partial results of
-multiplications in files of size 4MiB - 8MiB. We do this in order to not use all of RAM.
-Now, we will keep the partial sum of the terms on disk as well. We will have to split it up into
-several files. We should indicate somewhere the number of terms added.
+2.1: The Master and His Slaves
 
-So regarding the partition of tasks: 4MiB-8MiB files which contain for example: productory from 2240992 to 23093009329.
-The important thing is that the file is in the range 4-8MiB.
+3: System Management
 
-The program should also return where it left off in the event that the OS requests to end it.
+3.1: Master Files
 
-The program should also have a status file, where it outputs its status.
-The status file should be read and displayed on request.
+The Master node is tasked with updating several files.
 
-Also, the program should have a log file. In it, we make sure which processes start, which processes end properly,
-which processes are interrupted, etc. That way, we can know which files might be corrupted due to an interruption.
+3.1.1: Status File
 
-Moreover, there should be a Task Queue file.
+We want a file, called the status file, which will be readable by the user.
+It should contain information essential to the system, like the number of nodes
+in the network, the progress in the various phases of the computation of
+digits, etc. It should be concise and precise.
 
-More on Tasks:
+3.1.2: Global Task Queue File
 
-Process to compute Prod(a,b) (multiply every number between a and b inclusive)
-- Start from a, and then compute the binary digits of the partial products.
-Once the binary digits reach a certain threshold at Prod(a,k), append
-Prod(a,k) to the Task Queue.
--Repeat, but this time starting from k+1.
--Keep going until all of Prod(a,b) is covered.
+This file lists all the tasks declared by the Master, whether a task has been
+assigned, whether a task was completed, who completed or verified a task in
+what time, etc, which files and folders are required by which task, and which
+files and folders are produced by which task. This file will be used by the
+master in order to make decisions about assigning tasks.
 
-*The Task Manager portion of the program should assign some tasks to every node, and the nodes
-should confirm that they have accepted the task.
+3.1.3: Node Status File
 
-Once Prod(a,b) is partitioned, and the partial products are computed, we need a way to
-multiply all of those together and store it in multiple files. This is a proposal
-on how to store it between multiple files:
-- Index file: tells what number is stored in the files, how many files is it stored in, and
-which digits each file contains.
-- Data file #1: contains digits
+For every node in the network, the Master should ensure every so often (say,
+every 10 minutes) that the node is responsive and active. The Master keeps
+track of that in this file. Every node has an entry, and the entry says when
+the responsiveness of the node was checked by the Master. This will help us
+determine if a node crashes, freezes, or goes offline.
+
+3.1.4: Log File
+
+This is the general log file.
+
+*This is where errors are reported.
+
+3.2: Slave Files
+
+3.2.1: Slave Task Queue File
+
+3.2.2: Slave Log File
+
+A: Appendix
+
+A.1: Ideas
+
+Comp#1: You sum up the term #193220 to #203230949
 ...
-- Data file #n: contains digits.
+Comp#k: Compile the results from these computers, and give me a decimal
+expansion.
+..
 
-All these files will belong in one folder. This is how the files are called:
-FOLDER: .name/ (something like .39af200)
-- index.txt
-- 0.data
-- 1.data
-...
-- n.data
+To do that, I assume we need a hierarchy of director computers, to determine
+which tasks to divide between which computers. We should also have a director of
+directors. Also, if a director goes offline, the group of computers it used to
+direct should decide which one of themselves will be the new director.
 
-**The index file should be the last one being written, in order to confirm that everything went alright without interruptions.
+Oh, we should divide our computers into groups, each one with one director.
 
-Concerning Task Management
-If we want to assign a task to a node, we do this in the log file
+I don't wanna do this across the Internet, since there are security risk
+associated with data transmission. I don't wanna mess up my friends' computers.
+What I wanna do is to use a local network of computers.
 
-Master-Node: assigning Task tatata to Slave-Node#k
-Slave-Node#k: Task tatata received
+If I really wanna do this across the Internet, I need to learn more about
+Internet security.
+
+A.2: Ideas
 
 The Task Manager should take into account the Latency and the Bandwidth between the Master and each Slave.
 If the connection is slow, then it assigns MORE tasks to the slave. That way, the slave spends less time
@@ -327,70 +333,4 @@ a confirmation.
 IF two nodes perform the same task, they should compare their results. If their results match, put it in the log file.
 If the results DONT match, put it in the log file, and also write it in the status file.
 
-Keep a track record of offline-offlinings for each slave to assess their reliability.
-
-Each process should be able to "checkpoint". That means that it  creates an image of itself at that instant,
-so if it is killed, it could simply resume from where it left off.
-####
-
-Suppose we have a Prod(a,b) partitioned into many partial products over several files. How will we
-multiply all those numbers?
-First off, each dump of digits should have a bigint MANTISSA, and an exponent n, so that the number represented
-would be MANTISSA * 2^n. That way, we don't have to store a lot of zeroes in disk.
-
-With that in mind, here is what we can do: Let's say we want to multiply A and B, here is what we do:
-Split the digits of A somewhere around the middle into the digits A_1 and the digits A_2, and the same with B,
-such that the following conditions hold:
-1) A_1 * 2^k_A + A_2 = A, and the same for B, where k is where the split was made
-2) The filesize for A_c * B_d is within a reasonable range.
-Imagine with this latice:
-____|A_1|A_2|
-|B_1|___|___|
-|B_2|___|___|
-
-The filesize for each one of the four resulting squares should be within our acceptable range (4MiB-8MiB or something).
-Actually, we don't split it exactly in half: we split however many times we need.
-Finally, sum up all the resulting files (this is easier).
-
-Note that even the final multiplication of two giant multi-file integers can be split into tasks of multiplying smaller integers.
-Actually, in order to do this, let's forget about a minimum file size, and only focus on a maximum file size. Let this be 16MiB, 2^34 Byytes.
-
-3.1: Task Management Requirements
-
-The part of the program which will take care of tasks should do the following:
--Compute what tasks will need to be done
--Figure out which tasks depend on which other tasks
--Track which tasks have been completed
-
-4: Logging
-
-Our program will need to keep one or more log files. To do that, we can use
-syslog. How many log files will we need? I think one suffices. We would use this log
-file in order to keep track of which nodes enter and leave the network, which nodes
-are unresponsive, which tasks are declared by the master, which tasks are assigned
-to which nodes, which tasks are started being solved by which nodes, which tasks are
-completed by which nodes, which tasks have been verified by which nodes, which tasks were interrupted or lost (determined by the
-master), etc. Therefore, this is a general log file.
-
-This log file must NEVER be deleted! Else, we would have to start over in
-computing e. Our data from previous calculations would be intact, but we wouldn't
-know what to do with it.
-
-4.1: Log file
-The master node should be the only node writing into the log file. The rest of
-the nodes must pass their messages to the master in  order for him to write.
-We do this in order to eliminate the possibility of having multiple nodes write
-to the log file at the same time, possibly corrupting it.
-
-5: Data Storage
-
-We will dump all our data into binary blobs less than 2^24 Bytes, or 16MiB.
-The name of each file will be the hash of its contents. That way, we can ensure
-that the data in the file is not accidentally altered or corrupted. Now, the
-interpretation of the data, and what to do with it, that is up to the master
-node to figure out.
-
-In the table of tasks, where we put information about each task (e.g. whether
-it was completed, verified, assigned, if it was supposedly completed but there
-are missing files, who completed it, etc.), we should also write a list of
-data files associated with the task.
+Keep a track record of online-offlinings for each slave to assess their reliability.

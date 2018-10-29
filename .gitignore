@@ -1,6 +1,4 @@
 log
-test
-test/*
 *.o
 LagrangeErrorBound
 factorial
