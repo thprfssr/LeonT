@@ -1,0 +1,7 @@
+Using stirling.py, we found:
+
+we need n = 94851898542 terms,
+and ln(n!) = 2302585093035.708
+
+So in order to store the last factorial,
+we need ln(n!)/ln(2) = 3.32 TiB, best case scenario.
