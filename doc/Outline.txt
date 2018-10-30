@@ -18,12 +18,12 @@ e = \sum_{k=0}^n 1/k!
 
 Using the Lagrange error bound, we get
 
-R_n(x) = f^(n+1)(c)/(n+1)! * (x-a)^(n+1),
+R_n(x) <= f^(n+1)(c)/(n+1)! * (x-a)^(n+1),
 
 where a is the center, c is between x and a, and n is the n-th taylor
 polynomial. Now, we let f(x)=e^x,  x=1, and a=0. Thus,
 
-R_n(1) = e^c/(n+1)! <= e/(n+1)!
+R_n(1) <= e^c/(n+1)! <= e/(n+1)!
 
 We want our error R to be R < 10^(-D), where D is the number of desired digits.
 Thus, we get
@@ -34,8 +34,19 @@ which implies that
 
 e * 10^D < (n+1)!,
 
-which itself implies
+which implies that,
 
+1 + D * ln(10) < lnf(n + 1),
+
+where lnf(n) = ln(n!).
+
+Now, we can calculate lnf(x) by doing a brute force sum, or we can use
+Stirling's Approximation:
+n! ~ sqrt(tau * n) * (n / e)^n
+lnf(n) ~ (n + 1/2) * ln(n) - n + ln(tau) / 2.
+
+
+Going the brute force sum way,
 1 + D * ln(10) < \sum_{k=1}^{n+1} ln(k)
 
 Now, in the summatory in the right side, it's never bad to force the system to
