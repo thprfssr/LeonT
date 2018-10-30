@@ -22,7 +22,8 @@ D = 1E12
 value = 1 + D * math.log(10)
 while sum <= value:
     sum += math.log(i)
-    print("i =", i, "lnf(i) =", sum)
+    if i % 1000000 == 0:
+        print("i =", i, "M\tlnf(i) =", sum)
     i += 1
 
 print("The smallest solution to the inequality 1 + D * ln(10) < lnf(n), with D = 1 trillion, is:")
