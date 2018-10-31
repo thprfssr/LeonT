@@ -27,5 +27,5 @@ while sum <= value:
     i += 1
 
 print("The smallest solution to the inequality 1 + D * ln(10) < lnf(n), with D = 1 trillion, is:")
-print("n =", sum)
+print("n =", i, "lnf(n) =", sum)
 print("End:", datetime.datetime.now())
